@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for
-from werkzeug.security import generate_password_hash
+from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
 
-from database.db import get_db, init_db, seed_db
+from database.db import get_db, init_db, seed_db, get_user_by_email
 
 app = Flask(__name__)
+app.secret_key = "dev-secret-key-change-in-production"
 
 
 # ------------------------------------------------------------------ #
@@ -55,8 +56,28 @@ def register():
     return render_template("register.html")
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        error = None
+        if not email:
+            error = "Email is required."
+        elif not password:
+            error = "Password is required."
+        else:
+            user = get_user_by_email(email)
+            if user is None or not check_password_hash(user["password_hash"], password):
+                error = "Invalid email or password."
+
+        if error:
+            return render_template("login.html", error=error, email=email)
+
+        session["user_id"] = user["id"]
+        return redirect(url_for("landing"))
+
     return render_template("login.html")
 
 
@@ -76,7 +97,8 @@ def privacy():
 
 @app.route("/logout")
 def logout():
-    return "Logout — coming in Step 3"
+    session.clear()
+    return redirect(url_for("landing"))
 
 
 @app.route("/profile")

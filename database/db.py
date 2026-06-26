@@ -97,6 +97,19 @@ def seed_db():
         conn.close()
 
 
+def get_user_by_email(email):
+    """Query user by email (case-insensitive). Returns dict or None."""
+    conn = get_db()
+    try:
+        user = conn.execute(
+            "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+            (email.lower(),),
+        ).fetchone()
+        return dict(user) if user else None
+    finally:
+        conn.close()
+
+
 def _day_in_current_month(today, day):
     """Return YYYY-MM-DD for `day` in today's month/year, clamped to today.
 
